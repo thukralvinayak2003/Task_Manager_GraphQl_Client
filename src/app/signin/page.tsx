@@ -28,6 +28,9 @@ export default function SignInPage() {
       if (verifyGoogleToken) {
         window.localStorage.setItem("googleToken", verifyGoogleToken);
       }
+      setTimeout(() => {
+        toast.loading("Verifying");
+      }, 3000);
 
       router.push("/");
     },
@@ -35,7 +38,12 @@ export default function SignInPage() {
   );
 
   useEffect(() => {
-    if (window.localStorage.getItem("googleToken")) router.push("/");
+    if (window.localStorage.getItem("googleToken")) {
+      setTimeout(() => {
+        toast.loading("Verifying");
+      }, 3000);
+      router.push("/");
+    }
   }, []);
 
   const handleGoogleLoginFailure = () => {
