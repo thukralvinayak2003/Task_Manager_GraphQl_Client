@@ -1,101 +1,189 @@
-import Image from "next/image";
+"use client";
+
+import { useCurrentUser } from "@/hooks/user";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Modal } from "./ui/Modal"; // Assuming Modal is in components
+import CreateTaskForm from "./ui/CreateTaskForm";
+import UpdateTaskForm from "./ui/UpdateTaskForm"; // Import UpdateTaskForm
+import DeleteIcon from "@mui/icons-material/Delete"; // Import Delete icon from MUI
+import EditIcon from "@mui/icons-material/Edit"; // Import Edit icon from MUI
+import { Task, TaskDisplay } from "./lib/types"; // Assuming this is where the Task type is defined
+import { useGetTask } from "@/hooks/task";
+import { graphqlClient } from "@/clients/api";
+import { deleteTask, updateTask } from "@/graphql/mutation/task";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const { user, isLoading } = useCurrentUser();
+  const { tasks, refetch: refetchTasks } = useGetTask();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const router = useRouter();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUpdateMode, setIsUpdateMode] = useState(false); // Track if updating
+  const [currentTask, setCurrentTask] = useState<TaskDisplay | null>(null); // Store the task being updated
+
+  const openModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setIsUpdateMode(false); // Reset update mode
+    setCurrentTask(null); // Clear current task
+  };
+
+  const updateMyTask = async (
+    id: string,
+    title: string,
+    description: string,
+    status: string
+  ) => {
+    try {
+      const response = await graphqlClient.request(updateTask, {
+        updateTaskId: id,
+        payload: {
+          title,
+          description,
+          status,
+        },
+      });
+      await refetchTasks();
+      return response;
+    } catch (error: any) {
+      console.error("GraphQL Error Details:", error?.response?.errors);
+
+      return null;
+    }
+    closeModal(); // Close the modal after updating
+  };
+
+  const deleteThisTask = async (id: string) => {
+    try {
+      const response = await graphqlClient.request(deleteTask, {
+        deleteTaskId: id,
+      });
+      console.log(`Deleted task ${id}`, response);
+    } catch (error) {
+      console.error(`Failed to delete task ${id}`, error);
+    }
+
+    await refetchTasks();
+  };
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/signin");
+    }
+  }, [isLoading, user, router]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  const handleDelete = (taskId: string) => {
+    console.log(`Delete task with id: ${taskId}`);
+    deleteThisTask(taskId); // Delete task logic
+  };
+
+  const handleUpdate = (task: any) => {
+    console.log(`Update task with id: ${task.id}`);
+    setCurrentTask(task); // Set the current task to be updated
+    setIsUpdateMode(true); // Switch to update mode
+    openModal(); // Open modal for update form
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("googleToken"); // Remove the googleToken
+    router.push("/signin"); // Redirect to signin
+  };
+
+  console.log(tasks);
+  return (
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="container mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-4xl font-bold text-gray-800">Task Manager</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Logout
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Task Creation Button */}
+        <div className="text-center mb-6">
+          <button
+            onClick={() => {
+              setIsUpdateMode(false); // Ensure it's in create mode
+              openModal();
+            }}
+            className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
+          >
+            Create Task
+          </button>
+        </div>
+
+        {/* Task List */}
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+            Your Tasks
+          </h2>
+          <ul className="space-y-4">
+            {tasks &&
+              tasks.map((task) => (
+                <li
+                  key={task!.id}
+                  className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center"
+                >
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-800">
+                      {task!.title}
+                    </h3>
+                    <p className="text-gray-600">
+                      Description: {task!.description}
+                    </p>
+                    <p className="text-gray-600">Status: {task!.status}</p>
+                  </div>
+                  <div className="flex space-x-4">
+                    {/* Update Button */}
+                    <button
+                      onClick={() => handleUpdate(task)}
+                      className="text-blue-500 hover:text-blue-700"
+                    >
+                      <EditIcon />
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => handleDelete(task!.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </div>
+                </li>
+              ))}
+          </ul>
+        </div>
+
+        {/* Modal for Task Creation/Update */}
+        {isModalOpen && (
+          <Modal onClose={closeModal}>
+            {isUpdateMode && currentTask ? (
+              <UpdateTaskForm
+                initialTaskData={currentTask} // Pass the current task to be updated
+                onUpdate={updateMyTask} // Pass the update function
+                onSuccess={closeModal}
+              />
+            ) : (
+              <CreateTaskForm onSuccess={closeModal} />
+            )}
+          </Modal>
+        )}
+      </div>
     </div>
   );
 }
