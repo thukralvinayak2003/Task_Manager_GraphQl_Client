@@ -5,7 +5,7 @@ import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import toast from "react-hot-toast";
 
 export default function SignInPage() {
@@ -33,6 +33,10 @@ export default function SignInPage() {
     },
     []
   );
+
+  useEffect(() => {
+    if (window.localStorage.getItem("googleToken")) router.push("/");
+  }, []);
 
   const handleGoogleLoginFailure = () => {
     console.error("Google login failed:");
