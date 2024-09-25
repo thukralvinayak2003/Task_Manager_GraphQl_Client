@@ -29,6 +29,7 @@ export default function SignInPage() {
         window.localStorage.setItem("googleToken", verifyGoogleToken);
       }
 
+      setTimeout(() => {}, 1000);
       router.push("/");
     },
     []

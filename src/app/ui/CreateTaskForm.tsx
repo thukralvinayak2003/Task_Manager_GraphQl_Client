@@ -1,48 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { graphqlClient } from "@/clients/api";
-import { createTask } from "@/graphql/mutation/task";
-import { useGetTask } from "@/hooks/task";
+import { useCreateTask } from "@/hooks/task";
 
 interface CreateTaskFormProps {
   onSuccess: () => void;
 }
 
 function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
-  const { refetch: refetchTasks } = useGetTask();
-
+  const { createTask, isLoading, error } = useCreateTask(); // Use createTask from the hook
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     status: "TODO", // Default status
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Track errors
-
-  const createThisTask = async (
-    title: string,
-    description: string,
-    status: string
-  ) => {
-    try {
-      const response = await graphqlClient.request(createTask, {
-        payload: {
-          title,
-          description,
-          status,
-        },
-      });
-      await refetchTasks();
-      return response;
-    } catch (error: any) {
-      console.error("GraphQL Error Details:", error?.response?.errors);
-      setError(
-        error?.response?.errors?.[0]?.message || "Unknown error occurred"
-      );
-      return null;
-    }
-  };
 
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -57,17 +29,18 @@ function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsSubmitting(true);
-    setError(null);
 
     const { title, description, status } = formData;
 
-    const response = await createThisTask(title, description, status);
+    // Use the createTask function from the hook
+    createTask({
+      title,
+      description,
+      status,
+    });
 
-    if (response) {
-      console.log("Task created successfully:", response);
-      setFormData({ title: "", description: "", status: "TODO" }); // Reset form data
-      onSuccess(); // Call the callback to close the modal
-    }
+    setFormData({ title: "", description: "", status: "TODO" }); // Reset form data
+    onSuccess(); // Call the callback to close the modal
 
     setIsSubmitting(false);
   };
@@ -133,14 +106,14 @@ function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
         <input
           type="submit"
           className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 mt-6"
-          disabled={isSubmitting} // Disable the button during submission
-          value={isSubmitting ? "Submitting..." : "Create Task"}
+          disabled={isSubmitting || isLoading} // Disable the button during submission or loading
+          value={isSubmitting || isLoading ? "Submitting..." : "Create Task"}
         />
 
         {/* Error Message */}
         {error && (
           <p className="text-red-500 mt-3 text-sm">
-            Error creating task: {error}
+            Error creating task: {error.message}
           </p>
         )}
       </form>

@@ -2,23 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { TaskDisplay } from "../lib/types"; // Import the Task type
+import { useUpdateTask } from "@/hooks/task";
 
 interface UpdateTaskFormProps {
   initialTaskData: TaskDisplay;
-  onUpdate: (
-    id: string,
-    title: string,
-    description: string,
-    status: string
-  ) => Promise<unknown>;
   onSuccess: () => void;
 }
 
-function UpdateTaskForm({
-  initialTaskData,
-  onUpdate,
-  onSuccess,
-}: UpdateTaskFormProps) {
+function UpdateTaskForm({ initialTaskData, onSuccess }: UpdateTaskFormProps) {
+  const { updateTask } = useUpdateTask();
   const [formData, setFormData] = useState<TaskDisplay>(initialTaskData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,12 +34,16 @@ function UpdateTaskForm({
     setIsSubmitting(true);
 
     // Call the onUpdate function passed via props to handle task update
-    onUpdate(
-      initialTaskData.id,
-      formData.title,
-      formData.description,
-      formData.status
-    );
+
+    updateTask({
+      id: initialTaskData.id,
+      payload: {
+        title: formData.title,
+        description: formData.description,
+        status: formData.status,
+      },
+    });
+
     onSuccess();
     setIsSubmitting(false);
   };

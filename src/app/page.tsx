@@ -3,25 +3,26 @@
 import { useCurrentUser } from "@/hooks/user";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Modal } from "./ui/Modal"; // Assuming Modal is in components
+import { Modal } from "./ui/Modal";
 import CreateTaskForm from "./ui/CreateTaskForm";
 import UpdateTaskForm from "./ui/UpdateTaskForm"; // Import UpdateTaskForm
 import DeleteIcon from "@mui/icons-material/Delete"; // Import Delete icon from MUI
 import EditIcon from "@mui/icons-material/Edit"; // Import Edit icon from MUI
 import { Task, TaskDisplay } from "./lib/types"; // Assuming this is where the Task type is defined
-import { useGetTask } from "@/hooks/task";
+import { useGetTask, useUpdateTask } from "@/hooks/task";
+import { useDeleteTask } from "../hooks/task"; // Import the useDeleteTask hook
 import { graphqlClient } from "@/clients/api";
-import { deleteTask, updateTask } from "@/graphql/mutation/task";
+import { updateTask } from "@/graphql/mutation/task";
 
 export default function Home() {
   const { user, isLoading } = useCurrentUser();
   const { tasks, refetch: refetchTasks } = useGetTask();
-
+  const { deleteTask, isDeletePending } = useDeleteTask(); // Use the deleteTask mutation
   const router = useRouter();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isUpdateMode, setIsUpdateMode] = useState(false); // Track if updating
-  const [currentTask, setCurrentTask] = useState<TaskDisplay | null>(null); // Store the task being updated
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const [currentTask, setCurrentTask] = useState<TaskDisplay | null>(null);
 
   const openModal = () => {
     setIsModalOpen(true);
@@ -29,46 +30,8 @@ export default function Home() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setIsUpdateMode(false); // Reset update mode
-    setCurrentTask(null); // Clear current task
-  };
-
-  const updateMyTask = async (
-    id: string,
-    title: string,
-    description: string,
-    status: string
-  ) => {
-    try {
-      const response = await graphqlClient.request(updateTask, {
-        updateTaskId: id,
-        payload: {
-          title,
-          description,
-          status,
-        },
-      });
-      await refetchTasks();
-      return response;
-    } catch (error: any) {
-      console.error("GraphQL Error Details:", error?.response?.errors);
-
-      return null;
-    }
-    closeModal(); // Close the modal after updating
-  };
-
-  const deleteThisTask = async (id: string) => {
-    try {
-      const response = await graphqlClient.request(deleteTask, {
-        deleteTaskId: id,
-      });
-      console.log(`Deleted task ${id}`, response);
-    } catch (error) {
-      console.error(`Failed to delete task ${id}`, error);
-    }
-
-    await refetchTasks();
+    setIsUpdateMode(false);
+    setCurrentTask(null);
   };
 
   useEffect(() => {
@@ -81,24 +44,27 @@ export default function Home() {
     return <div>Loading...</div>;
   }
 
-  const handleDelete = (taskId: string) => {
+  const handleDelete = async (taskId: string) => {
     console.log(`Delete task with id: ${taskId}`);
-    deleteThisTask(taskId); // Delete task logic
+    try {
+      deleteTask(taskId); // Trigger the delete mutation
+    } catch (error) {
+      console.error(`Failed to delete task ${taskId}`, error);
+    }
   };
 
   const handleUpdate = (task: any) => {
     console.log(`Update task with id: ${task.id}`);
-    setCurrentTask(task); // Set the current task to be updated
-    setIsUpdateMode(true); // Switch to update mode
-    openModal(); // Open modal for update form
+    setCurrentTask(task);
+    setIsUpdateMode(true);
+    openModal();
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("googleToken"); // Remove the googleToken
-    router.push("/signin"); // Redirect to signin
+    localStorage.removeItem("googleToken");
+    router.push("/signin");
   };
 
-  console.log(tasks);
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="container mx-auto">
@@ -117,7 +83,7 @@ export default function Home() {
         <div className="text-center mb-6">
           <button
             onClick={() => {
-              setIsUpdateMode(false); // Ensure it's in create mode
+              setIsUpdateMode(false);
               openModal();
             }}
             className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600"
@@ -160,6 +126,7 @@ export default function Home() {
                     <button
                       onClick={() => handleDelete(task!.id)}
                       className="text-red-500 hover:text-red-700"
+                      disabled={isDeletePending} // Optionally disable the button while pending
                     >
                       <DeleteIcon />
                     </button>
@@ -174,8 +141,7 @@ export default function Home() {
           <Modal onClose={closeModal}>
             {isUpdateMode && currentTask ? (
               <UpdateTaskForm
-                initialTaskData={currentTask} // Pass the current task to be updated
-                onUpdate={updateMyTask} // Pass the update function
+                initialTaskData={currentTask}
                 onSuccess={closeModal}
               />
             ) : (
