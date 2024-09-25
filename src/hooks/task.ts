@@ -7,6 +7,7 @@ import {
   useQueryClient,
   InvalidateQueryFilters,
 } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 
 // Hook to fetch tasks
 export const useGetTask = () => {
@@ -25,6 +26,7 @@ export const useGetTask = () => {
 };
 
 // Hook to create a task
+// Hook to create a task
 export const useCreateTask = () => {
   const queryClient = useQueryClient(); // Get access to the cache
 
@@ -32,18 +34,26 @@ export const useCreateTask = () => {
     mutationFn: (payload: any) =>
       graphqlClient.request(createTask, { payload }), // Send mutation request
 
-    onSuccess: () => {
+    onMutate: () => {
+      // Show loading toast
+      const toastId = toast.loading("Creating Task...");
+      return toastId; // Return the toast ID
+    },
+
+    onSuccess: (data, variables, context) => {
+      // Dismiss the loading toast
+      toast.dismiss(context);
       queryClient.invalidateQueries(["all-task"] as InvalidateQueryFilters); // Refetch tasks after successful mutation
+    },
+
+    onError: (error, variables, context) => {
+      toast.dismiss(context);
+      toast.error("Failed to create task"); // Show error message
     },
   });
 
   return {
     createTask: mutation.mutate, // Function to trigger task creation
-    status: mutation.status, // Check mutation status
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
-    error: mutation.error,
-    isLoading: mutation.status === "pending", // Equivalent to ispending
   };
 };
 
@@ -55,18 +65,24 @@ export const useUpdateTask = () => {
     mutationFn: ({ id, payload }: { id: string; payload: any }) =>
       graphqlClient.request(updateTask, { updateTaskId: id, payload }),
 
+    onMutate: () => {
+      const toastId = toast.loading("Updating Task...");
+      return toastId;
+    },
+
     onSuccess: () => {
+      toast.dismiss();
       queryClient.invalidateQueries(["all-task"] as InvalidateQueryFilters); // Refetch tasks after successful mutation
+    },
+
+    onError: () => {
+      toast.dismiss();
+      toast.error("Failed to update task");
     },
   });
 
   return {
     updateTask: mutation.mutate, // Function to trigger task update
-    status: mutation.status, // Check mutation status
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
-    error: mutation.error,
-    isUpdatePending: mutation.status === "pending", // Equivalent to ispending
   };
 };
 
@@ -78,17 +94,26 @@ export const useDeleteTask = () => {
     mutationFn: (id: string) =>
       graphqlClient.request(deleteTask, { deleteTaskId: id }), // Send mutation request
 
+    onMutate: () => {
+      // Show loading toast
+      const toastId = toast.loading("Deleting Task...");
+      return toastId; // Return the toast ID
+    },
+
     onSuccess: () => {
+      // Dismiss the loading toast
+      toast.dismiss();
       queryClient.invalidateQueries(["all-task"] as InvalidateQueryFilters); // Refetch tasks after successful deletion
+    },
+
+    onError: () => {
+      // Dismiss the loading toast on error
+      toast.dismiss();
+      toast.error("Failed to delete task"); // Show error message
     },
   });
 
   return {
     deleteTask: mutation.mutate, // Function to trigger task deletion
-    status: mutation.status, // Check mutation status
-    isSuccess: mutation.isSuccess,
-    isError: mutation.isError,
-    error: mutation.error,
-    isDeletePending: mutation.status === "pending", // Equivalent to isLoading
   };
 };

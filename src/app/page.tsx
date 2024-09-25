@@ -17,7 +17,7 @@ import { updateTask } from "@/graphql/mutation/task";
 export default function Home() {
   const { user, isLoading } = useCurrentUser();
   const { tasks, refetch: refetchTasks } = useGetTask();
-  const { deleteTask, isDeletePending } = useDeleteTask(); // Use the deleteTask mutation
+  const { deleteTask } = useDeleteTask(); // Use the deleteTask mutation
   const router = useRouter();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,7 +126,6 @@ export default function Home() {
                     <button
                       onClick={() => handleDelete(task!.id)}
                       className="text-red-500 hover:text-red-700"
-                      disabled={isDeletePending} // Optionally disable the button while pending
                     >
                       <DeleteIcon />
                     </button>

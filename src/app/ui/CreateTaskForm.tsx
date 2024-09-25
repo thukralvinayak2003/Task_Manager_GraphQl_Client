@@ -8,7 +8,7 @@ interface CreateTaskFormProps {
 }
 
 function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
-  const { createTask, isLoading, error } = useCreateTask(); // Use createTask from the hook
+  const { createTask } = useCreateTask(); // Use createTask from the hook
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -106,16 +106,9 @@ function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
         <input
           type="submit"
           className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm w-full sm:w-auto px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 mt-6"
-          disabled={isSubmitting || isLoading} // Disable the button during submission or loading
-          value={isSubmitting || isLoading ? "Submitting..." : "Create Task"}
+          disabled={isSubmitting} // Disable the button during submission or loading
+          value={isSubmitting ? "Submitting..." : "Create Task"}
         />
-
-        {/* Error Message */}
-        {error && (
-          <p className="text-red-500 mt-3 text-sm">
-            Error creating task: {error.message}
-          </p>
-        )}
       </form>
     </div>
   );
